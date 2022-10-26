@@ -20,7 +20,20 @@ const client = new MongoClient(uri, {
   serverApi: ServerApiVersion.v1,
 });
 
-let serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+let serviceAccount ={
+  type: "service_account",
+  project_id: "chrono-click",
+  private_key_id: "33eeaa73572bca2133c95602fe140312d7a8c57c",
+  private_key:
+    "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDWTkAcIwb32Iym\nYHvK2GKwk3PbS8sgbIiiNZ6CyO5sexOyJGhPJTPuX5gyiDKPAiCejJ02sOhxvuYX\nPhwa+HbMxJiB31cs1blu4z5N4K41VGpw9XuSIh7uXGy0312/EidhCFhINsXqCRVk\nWbujMeB1vjt+rYTF+P7ZGXolpYugpnnCULf4YNoqRUIdEr5NjP/sb4wKCEyB+y1M\nbUBEa+q32RJkBZM9YeYPapU9vZg5FK1jDj+siQsdMqo9vUPj+2CRkgok1f1z9/BT\nLRdy0WyFGlYmPkUp7Nv1iCs+RlynMnsvmgX57c6RhwZEQ/58xE2udhjXp0xQPK7B\n2tSbL08rAgMBAAECggEAWDg1LwACVdPYroLoYuvp0HuaxWsxjsLvCitdecRCVfji\ndkKDiBUuCBJlImQrv/Alwm7rJwDzZyOpL2c7haTDru69QzVP+x5uK+YzFzcHL9/0\nw1RizpjqN8BnZZvPySCtgkW/pdaaaYncuwcvdXJKTt4FOtQuZJroOjHBNS8tR++O\nkVlXEoCw8qhisIa0SDAU5NdxaFvyt3MRcEyxEvceFPK16gxeu3QQF75nbbuSYSla\nK0DvS7HFQfEXVJGOu1w3hav6ir7QpchBfl7dqA+tfYgzc+19U/202Nk+9nKBPeew\nv175WV8x/cm8E5G3jjjikaPPtgHza2c3kolVeol4qQKBgQD+OP+8VcggpQvZMSTa\nqn/sTC57rgcF7vn8xf5ccZWwCjDSZI6oQn5liOnSjXJAtFs7cVb4On4LJrzAb09j\nlfV7ZLzxMwvMZ6PFzEbvho+IPQmPQT8bZgKYUJW0uOGXrALk9U0MV67wY85+DiDx\noGng3wOn07Q1B632ICkZzVLDSQKBgQDXzc8gT8/MriIReej07BbpSWD6WMGgkvC1\nSZo6QfronJ3sJ7ICGgxBzMnOM8nkL70GKXaKJvXYMTHGUhJaAKGEPHX6MDqiCbco\na0+d6j4XQ50FMsT5VCS1cOr36p98XzcYkFcmaMUiYs4bT/kIFp3Rc2n7wGogesz4\nM3YD2huK0wKBgHCaBowA4teywwC8h7pi8q5TP/OALZQvOYMAn52KoeaLXPyTlaxp\nZ1rJveeIxyZpvE8j8IWaQuHlko0ZwGw3q7ev8xBSr9MlxKCDzpehXknV3zoYiD82\ne8fDScv2Z9WqVs3a6PmijNXlHz0uPOFJUBxOK2xWlOc4M5FkxU+sZhAhAoGBAJ1T\ne2cRCGstn8Sh3cWAwIs+ZabdQfvwY++mQvup0mP2meLqZYnGt5zY0V60vsDOVL3D\nSJobISuFYcY1Ww+mWhnvggrtUjGDZ7Xd1eNIPA/1yOlbQ+KJB2IHeiVXNQIU4DPW\nNtLXmrAg3CVpPiI5asChpWhVtIkNPZTM34KbZWzlAoGBAIIYn/WLe8f1+xlcXGw7\n1ZoaBS49l1y3PfgXvZfgcDMQDBEp56s8VcVBZEnJsfYjh68IZH+/eezZ+ZV8BHFz\nhfvn9W0hyVo1HxeZB0D6eqfqyQphHuQtMJz8xNXlz+NPOrrx0w9gzF9zukY1v4RC\nmfnVEDmOe4cRfRa5xGChHm55\n-----END PRIVATE KEY-----\n",
+  client_email: "firebase-adminsdk-88ym2@chrono-click.iam.gserviceaccount.com",
+  client_id: "109091584681779048214",
+  auth_uri: "https://accounts.google.com/o/oauth2/auth",
+  token_uri: "https://oauth2.googleapis.com/token",
+  auth_provider_x509_cert_url: "https://www.googleapis.com/oauth2/v1/certs",
+  client_x509_cert_url:
+    "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-88ym2%40chrono-click.iam.gserviceaccount.com",
+};
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
