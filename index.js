@@ -91,6 +91,22 @@ async function run() {
       const order = await cursor.toArray();
       res.json(order);
     });
+    //single user orders
+    app.get("/orders/:email", async (req, res) => {
+      const email = req.params.email;
+      console.log(email);
+      const query = { email: email };
+      const cursor = await orderCollection.find(query);
+      const order = await cursor.toArray();
+      res.json(order);
+    });
+    //Manage Orders
+    app.delete("/orders/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const result = await orderCollection.deleteOne(query);
+      res.json(result);
+    });
     //set Review Api
     app.post("/reviews", async (req, res) => {
       const name = req.body.name;
@@ -152,6 +168,7 @@ async function run() {
           .json({ message: "You Dont have permission to make Admin" });
       }
     });
+
     //Post Product Api
 
     app.post("/products", async (req, res) => {
