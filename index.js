@@ -20,7 +20,7 @@ const client = new MongoClient(uri, {
   serverApi: ServerApiVersion.v1,
 });
 
-let serviceAccount ={
+let serviceAccount = {
   type: "service_account",
   project_id: "chrono-click",
   private_key_id: "33eeaa73572bca2133c95602fe140312d7a8c57c",
@@ -34,6 +34,7 @@ let serviceAccount ={
   client_x509_cert_url:
     "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-88ym2%40chrono-click.iam.gserviceaccount.com",
 };
+// let serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -116,9 +117,22 @@ async function run() {
     //Manage Orders
     app.delete("/orders/:id", async (req, res) => {
       const id = req.params.id;
-      const query = { _id: ObjectId(id) };
+      console.log(id);
+      const query = orderCollection.find({
+        cart: { $elemMatch: { "cart._id": ObjectId(id) } },
+      });
+
       const result = await orderCollection.deleteOne(query);
+      console.log(result);
       res.json(result);
+    });
+    //Manage Product
+    app.delete("/products/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const result = await productCollection.deleteOne(query);
+      res.json(result);
+      console.log(id);
     });
     //set Review Api
     app.post("/reviews", async (req, res) => {
@@ -152,6 +166,7 @@ async function run() {
     //Check Admin Api
     app.get("/users/:email", async (req, res) => {
       const email = req.params.email;
+
       const query = { email: email };
       const user = await usersCollection.findOne(query);
       let isAdmin = false;
@@ -163,7 +178,7 @@ async function run() {
     //Admin
     app.put("/users/admin", verifyToken, async (req, res) => {
       const user = req.body;
-
+      console.log(user);
       const requester = req.decodedEmail;
       if (requester) {
         const requesterAccount = await usersCollection.findOne({
