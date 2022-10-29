@@ -87,7 +87,6 @@ async function run() {
     });
 
     //POST API Post Cart Item
-    //POST API Post Cart Item
     app.post("/orders", async (req, res) => {
       console.log(req.body);
       const email = req.body.email;
@@ -118,12 +117,10 @@ async function run() {
     app.delete("/orders/:id", async (req, res) => {
       const id = req.params.id;
       console.log(id);
-      const query = orderCollection.find({
-        cart: { $elemMatch: { "cart._id": ObjectId(id) } },
-      });
+      const options = { cart:{$elemMatch:{_id:id}} };
 
-      const result = await orderCollection.deleteOne(query);
-      console.log(result);
+      const result = await orderCollection.deleteOne(options);
+
       res.json(result);
     });
     //Manage Product
