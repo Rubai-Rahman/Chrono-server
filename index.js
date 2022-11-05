@@ -60,6 +60,7 @@ async function run() {
     const reviewCollection = database.collection("review");
     const orderCollection = database.collection("orders");
     const usersCollection = database.collection("users");
+    const newsCollection = database.collection("news");
     //Get Products
     app.get("/products", async (req, res) => {
       const cursor = productCollection.find({});
@@ -78,6 +79,7 @@ async function run() {
 
       res.send({ count, products });
     });
+
     //Get single Api
     app.get("/products/:id", async (req, res) => {
       const id = req.params.id;
@@ -88,7 +90,6 @@ async function run() {
 
     //POST API Post Cart Item
     app.post("/orders", async (req, res) => {
-      console.log(req.body);
       const email = req.body.email;
       const cart = req.body.cart;
       const order = {
@@ -107,7 +108,6 @@ async function run() {
     //single user orders
     app.get("/orders/:email", async (req, res) => {
       const email = req.params.email;
-      console.log(email);
       const query = { email: email };
       const cursor = await orderCollection.find(query);
       const order = await cursor.toArray();
@@ -116,8 +116,9 @@ async function run() {
     //Manage Orders
     app.delete("/orders/:id", async (req, res) => {
       const id = req.params.id;
-      console.log(id);
-      const options = { cart:{$elemMatch:{_id:id}} };
+
+      const options = { cart: { $elemMatch: { _id: id } } };
+      // const options = { $pull: { cart: { _id: ObjectId(id) } } };
 
       const result = await orderCollection.deleteOne(options);
 
@@ -129,19 +130,46 @@ async function run() {
       const query = { _id: ObjectId(id) };
       const result = await productCollection.deleteOne(query);
       res.json(result);
-      console.log(id);
     });
     //set Review Api
-    app.post("/reviews", async (req, res) => {
+    app.post("/review", async (req, res) => {
       const name = req.body.name;
       const comment = req.body.review;
+      const img = req.body.image;
       const review = {
         name,
         comment,
+        img,
       };
       const result = await reviewCollection.insertOne(review);
 
       res.json(result);
+    });
+    //Get REviews
+    app.get("/review", async (req, res) => {
+      const cursor = reviewCollection.find({});
+      const order = await cursor.toArray();
+      res.json(order);
+    });
+    //set news Api
+    app.post("/news", async (req, res) => {
+      const name = req.body.name;
+      const details = req.body.details;
+      const img = req.body.image;
+      const news = {
+        name,
+        details,
+        img,
+      };
+      const result = await newsCollection.insertOne(news);
+
+      res.json(result);
+    });
+    //Get REviews
+    app.get("/news", async (req, res) => {
+      const cursor = newsCollection.find({});
+      const order = await cursor.toArray();
+      res.json(order);
     });
     //post user
     app.post("/users", async (req, res) => {
@@ -175,7 +203,6 @@ async function run() {
     //Admin
     app.put("/users/admin", verifyToken, async (req, res) => {
       const user = req.body;
-      console.log(user);
       const requester = req.decodedEmail;
       if (requester) {
         const requesterAccount = await usersCollection.findOne({
@@ -200,16 +227,14 @@ async function run() {
       const name = req.body.name;
       const price = req.body.price;
       const details = req.body.details;
-      const pic = req.files.image;
-      const picData = pic.data;
-      const encodedPic = picData.toString("base64");
-      const imageBuffer = Buffer.from(encodedPic, "base64");
+      const img = req.body.image;
       const product = {
         name,
         price,
         details,
-        image: imageBuffer,
+        img,
       };
+
       const result = await productCollection.insertOne(product);
       res.json(result);
     });
