@@ -171,6 +171,15 @@ async function run() {
       const order = await cursor.toArray();
       res.json(order);
     });
+    //Get single News
+    app.get("/news/:id", async (req, res) => {
+      const id = req.params.id;
+
+      const query = { _id: ObjectId(id) };
+      const news = await newsCollection.findOne(query);
+
+      res.json(news);
+    });
     //post user
     app.post("/users", async (req, res) => {
       const user = req.body;
