@@ -188,15 +188,35 @@ async function run() {
     });
 
     app.put("/users", async (req, res) => {
-      const user = req.body;
-      const filter = { email: user.email };
-      const option = { upsert: true };
-      const updateDoc = {
-        $set: user,
-      };
-      const result = await usersCollection.updateOne(filter, updateDoc, option);
-      res.json(result);
-    });
+  const user = req.body;
+  const filter = { email: user.email };
+
+  try {
+    // 1️⃣ Check if user already exists
+    const existingUser = await usersCollection.findOne(filter);
+
+    if (existingUser) {
+      // ✅ User exists — return as-is without updating
+      return res.json(existingUser);
+    }
+
+    // 2️⃣ New user — insert with all fields (email, name, role, photoURL)
+    const newUser = {
+      email: user.email,
+      name: user.name,
+      photoURL: user.photoURL,
+      role: user.role || 'user', // default fallback if not sent
+    };
+
+    await usersCollection.insertOne(newUser);
+
+    return res.json(newUser); // ✅ Return created user
+  } catch (error) {
+    console.error('Error in /users PUT:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
     //Check Admin Api
     app.get("/users/:email", async (req, res) => {
       const email = req.params.email;
@@ -260,3 +280,4 @@ app.get("/", (req, res) => {
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 });
+
