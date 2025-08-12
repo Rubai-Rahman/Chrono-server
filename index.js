@@ -172,14 +172,65 @@ async function run() {
       res.json(order);
     });
     //Get single News
-    app.get("/news/:id", async (req, res) => {
-      const id = req.params.id;
+   app.get("/news/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const commentsPage = parseInt(req.query.commentsPage) || 1;
+    const commentsLimit = parseInt(req.query.commentsLimit) || 5;
 
-      const query = { _id: ObjectId(id) };
-      const news = await newsCollection.findOne(query);
+    const newsCollection = client.db("cronoClick").collection("news");
+    const commentsCollection = client.db("cronoClick").collection("comments");
 
-      res.json(news);
+    const news = await newsCollection.findOne({ _id: ObjectId(id) });
+    if (!news) return res.status(404).json({ error: "News not found" });
+
+    // Fetch comments for this news with pagination
+    const commentsCursor = commentsCollection
+      .find({ newsId: ObjectId(id) })
+      .sort({ date: -1 })
+      .skip((commentsPage - 1) * commentsLimit)
+      .limit(commentsLimit);
+
+    const comments = await commentsCursor.toArray();
+
+    const totalComments = await commentsCollection.countDocuments({ newsId: ObjectId(id) });
+
+    res.json({
+      news,
+      comments,
+      commentsPagination: {
+        total: totalComments,
+        page: commentsPage,
+        pages: Math.ceil(totalComments / commentsLimit)
+      }
     });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+    // POST /comments - add a new comment for a news item
+app.post("/comments", async (req, res) => {
+  try {
+    const { newsId, user, message } = req.body;
+    if (!newsId || !user || !message) {
+      return res.status(400).json({ error: "newsId, user, and message are required" });
+    }
+
+    const comment = {
+      newsId: ObjectId(newsId),
+      user,
+      message,
+      date: new Date()
+    };
+
+    const result = await client.db("cronoClick").collection("comments").insertOne(comment);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
     //post user
     app.post("/users", async (req, res) => {
       const user = req.body;
@@ -280,4 +331,5 @@ app.get("/", (req, res) => {
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 });
+
 
