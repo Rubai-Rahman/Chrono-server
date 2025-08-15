@@ -171,21 +171,23 @@ async function run() {
       const order = await cursor.toArray();
       res.json(order);
     });
-    //Get single News
-//Get single News
+
+
+// GET single News with comments and user reactions
 app.get("/news/:id", async (req, res) => {
   try {
     const id = req.params.id;
     const commentsPage = parseInt(req.query.commentsPage) || 1;
-    const commentsLimit = parseInt(req.query.commentsLimit) || 50; // Increase limit for better UX
-    
+    const commentsLimit = parseInt(req.query.commentsLimit) || 50;
+
     const newsCollection = client.db("cronoClick").collection("news");
     const commentsCollection = client.db("cronoClick").collection("comments");
-    
+    const reactionsCollection = client.db("cronoClick").collection("comment_reactions");
+
     const news = await newsCollection.findOne({ _id: ObjectId(id) });
     if (!news) return res.status(404).json({ error: "News not found" });
 
-    // Fetch ALL comments for this news (we'll organize them hierarchically)
+    // Fetch ALL comments for this news
     const allComments = await commentsCollection
       .find({ newsId: ObjectId(id) })
       .sort({ date: -1 })
@@ -195,7 +197,6 @@ app.get("/news/:id", async (req, res) => {
     const commentMap = new Map();
     const topLevelComments = [];
 
-    // First pass: create comment objects with replies array
     allComments.forEach(comment => {
       commentMap.set(comment._id.toString(), {
         ...comment,
@@ -206,10 +207,8 @@ app.get("/news/:id", async (req, res) => {
       });
     });
 
-    // Second pass: build hierarchy
     allComments.forEach(comment => {
       const commentObj = commentMap.get(comment._id.toString());
-      
       if (comment.parentId) {
         const parent = commentMap.get(comment.parentId.toString());
         if (parent) {
@@ -220,7 +219,7 @@ app.get("/news/:id", async (req, res) => {
       }
     });
 
-    // Sort replies by date (oldest first for better conversation flow)
+    // Sort replies oldest first for conversation flow
     const sortReplies = (comments) => {
       comments.forEach(comment => {
         if (comment.replies.length > 0) {
@@ -231,22 +230,41 @@ app.get("/news/:id", async (req, res) => {
     };
     sortReplies(topLevelComments);
 
+    // --- Add user-specific reactions ---
+    const userId = req.user?.id || "anonymous"; // Replace with real auth user
+    const addUserReactions = async (comments) => {
+      for (let comment of comments) {
+        const userReaction = await reactionsCollection.findOne({
+          commentId: ObjectId(comment._id),
+          userId: userId
+        });
+
+        comment.userReaction = userReaction ? userReaction.reaction : null;
+
+        if (comment.replies && comment.replies.length > 0) {
+          await addUserReactions(comment.replies);
+        }
+      }
+    };
+
+    await addUserReactions(topLevelComments);
+
     const totalComments = allComments.length;
 
     res.json({
       news,
-      comments: topLevelComments, // Return hierarchical structure
+      comments: topLevelComments,
       commentsPagination: {
         total: totalComments,
         page: commentsPage,
         pages: Math.ceil(totalComments / commentsLimit)
       }
     });
+
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
-
 
 // POST /comments - add a new comment or reply for a news item
 app.post("/comments", async (req, res) => {
@@ -283,6 +301,81 @@ app.post("/comments", async (req, res) => {
   }
 });
 
+// POST /comments/:id/react - react to a comment (like, dislike, or remove reaction)
+app.post("/comments/:id/react", async (req, res) => {
+  try {
+    const commentId = req.params.id;
+    const { reaction } = req.body; // 'like', 'dislike', or 'remove'
+    const userId = req.user?.id || 'anonymous'; // You'll need to get this from your auth system
+    
+    const commentsCollection = client.db("cronoClick").collection("comments");
+    const reactionsCollection = client.db("cronoClick").collection("comment_reactions");
+    
+    // First, remove any existing reaction from this user for this comment
+    await reactionsCollection.deleteOne({
+      commentId: ObjectId(commentId),
+      userId: userId
+    });
+    
+    // Get current comment to calculate new counts
+    const comment = await commentsCollection.findOne({ _id: ObjectId(commentId) });
+    if (!comment) {
+      return res.status(404).json({ error: "Comment not found" });
+    }
+    
+    let likesChange = 0;
+    let dislikesChange = 0;
+    let userReaction = null;
+    
+    if (reaction !== 'remove') {
+      // Add the new reaction
+      await reactionsCollection.insertOne({
+        commentId: ObjectId(commentId),
+        userId: userId,
+        reaction: reaction,
+        date: new Date()
+      });
+      
+      userReaction = reaction;
+      
+      if (reaction === 'like') {
+        likesChange = 1;
+      } else if (reaction === 'dislike') {
+        dislikesChange = 1;
+      }
+    }
+    
+    // Recalculate total likes and dislikes
+    const totalLikes = await reactionsCollection.countDocuments({
+      commentId: ObjectId(commentId),
+      reaction: 'like'
+    });
+    
+    const totalDislikes = await reactionsCollection.countDocuments({
+      commentId: ObjectId(commentId),
+      reaction: 'dislike'
+    });
+    
+    // Update the comment with new counts
+    await commentsCollection.updateOne(
+      { _id: ObjectId(commentId) },
+      { 
+        $set: { 
+          likes: totalLikes,
+          dislikes: totalDislikes
+        }
+      }
+    );
+    
+    res.json({ 
+      likes: totalLikes, 
+      dislikes: totalDislikes,
+      userReaction: userReaction
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
     //post user
     app.post("/users", async (req, res) => {
@@ -384,6 +477,7 @@ app.get("/", (req, res) => {
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 });
+
 
 
 
