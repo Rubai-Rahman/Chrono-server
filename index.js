@@ -172,32 +172,70 @@ async function run() {
       res.json(order);
     });
     //Get single News
-   app.get("/news/:id", async (req, res) => {
+//Get single News
+app.get("/news/:id", async (req, res) => {
   try {
     const id = req.params.id;
     const commentsPage = parseInt(req.query.commentsPage) || 1;
-    const commentsLimit = parseInt(req.query.commentsLimit) || 5;
-
+    const commentsLimit = parseInt(req.query.commentsLimit) || 50; // Increase limit for better UX
+    
     const newsCollection = client.db("cronoClick").collection("news");
     const commentsCollection = client.db("cronoClick").collection("comments");
-
+    
     const news = await newsCollection.findOne({ _id: ObjectId(id) });
     if (!news) return res.status(404).json({ error: "News not found" });
 
-    // Fetch comments for this news with pagination
-    const commentsCursor = commentsCollection
+    // Fetch ALL comments for this news (we'll organize them hierarchically)
+    const allComments = await commentsCollection
       .find({ newsId: ObjectId(id) })
       .sort({ date: -1 })
-      .skip((commentsPage - 1) * commentsLimit)
-      .limit(commentsLimit);
+      .toArray();
 
-    const comments = await commentsCursor.toArray();
+    // Organize comments hierarchically
+    const commentMap = new Map();
+    const topLevelComments = [];
 
-    const totalComments = await commentsCollection.countDocuments({ newsId: ObjectId(id) });
+    // First pass: create comment objects with replies array
+    allComments.forEach(comment => {
+      commentMap.set(comment._id.toString(), {
+        ...comment,
+        _id: comment._id.toString(),
+        newsId: comment.newsId.toString(),
+        parentId: comment.parentId ? comment.parentId.toString() : null,
+        replies: []
+      });
+    });
+
+    // Second pass: build hierarchy
+    allComments.forEach(comment => {
+      const commentObj = commentMap.get(comment._id.toString());
+      
+      if (comment.parentId) {
+        const parent = commentMap.get(comment.parentId.toString());
+        if (parent) {
+          parent.replies.push(commentObj);
+        }
+      } else {
+        topLevelComments.push(commentObj);
+      }
+    });
+
+    // Sort replies by date (oldest first for better conversation flow)
+    const sortReplies = (comments) => {
+      comments.forEach(comment => {
+        if (comment.replies.length > 0) {
+          comment.replies.sort((a, b) => new Date(a.date) - new Date(b.date));
+          sortReplies(comment.replies);
+        }
+      });
+    };
+    sortReplies(topLevelComments);
+
+    const totalComments = allComments.length;
 
     res.json({
       news,
-      comments,
+      comments: topLevelComments, // Return hierarchical structure
       commentsPagination: {
         total: totalComments,
         page: commentsPage,
@@ -209,10 +247,12 @@ async function run() {
   }
 });
 
-    // POST /comments - add a new comment for a news item
+
+// POST /comments - add a new comment or reply for a news item
 app.post("/comments", async (req, res) => {
   try {
-    const { newsId, user, message } = req.body;
+    const { newsId, user, message, parentId } = req.body;
+    
     if (!newsId || !user || !message) {
       return res.status(400).json({ error: "newsId, user, and message are required" });
     }
@@ -221,15 +261,28 @@ app.post("/comments", async (req, res) => {
       newsId: ObjectId(newsId),
       user,
       message,
-      date: new Date()
+      date: new Date(),
+      parentId: parentId ? ObjectId(parentId) : null, // Add parentId support
+      likes: 0, // Initialize likes count
+      replyCount: 0 // Initialize reply count
     };
 
     const result = await client.db("cronoClick").collection("comments").insertOne(comment);
+
+    // If this is a reply, increment the parent comment's reply count
+    if (parentId) {
+      await client.db("cronoClick").collection("comments").updateOne(
+        { _id: ObjectId(parentId) },
+        { $inc: { replyCount: 1 } }
+      );
+    }
+
     res.json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
+
 
     //post user
     app.post("/users", async (req, res) => {
@@ -331,5 +384,6 @@ app.get("/", (req, res) => {
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 });
+
 
 
