@@ -61,38 +61,40 @@ async function run() {
     const orderCollection = database.collection("orders");
     const usersCollection = database.collection("users");
     const newsCollection = database.collection("news");
-   app.get("/products", async (req, res) => {
-  const { page, size, category, brand, priceMin, priceMax, sort } = req.query;
 
+    //  Extended /products route
+app.get("/products", async (req, res) => {
+  const { page, size, isFeatured, sort, limit, category, brand } = req.query;
+
+  // Build MongoDB query dynamically
   let query = {};
 
-  // Category filter
+  if (isFeatured === "true") query.isFeatured = true;
   if (category) query.category = category;
-
-  // Brand filter
   if (brand) query.brand = brand;
-
-  // Price range filter
-  if (priceMin || priceMax) {
-    query.price = {};
-    if (priceMin) query.price.$gte = parseFloat(priceMin);
-    if (priceMax) query.price.$lte = parseFloat(priceMax);
-  }
 
   let cursor = productCollection.find(query);
 
   // Sorting
   if (sort === "createdAt_desc") cursor = cursor.sort({ createdAt: -1 });
+  else if (sort === "createdAt_asc") cursor = cursor.sort({ createdAt: 1 });
   else if (sort === "price_asc") cursor = cursor.sort({ price: 1 });
   else if (sort === "price_desc") cursor = cursor.sort({ price: -1 });
 
-  // Pagination
-  const count = await cursor.count();
-  if (page && size) cursor = cursor.skip(parseInt(page) * parseInt(size)).limit(parseInt(size));
+  // Apply limit for home page featured
+  if (limit) cursor = cursor.limit(parseInt(limit));
 
+  // Pagination
+  if (page && size) {
+    cursor = cursor.skip(parseInt(page) * parseInt(size)).limit(parseInt(size));
+  }
+
+  const count = await cursor.count();
   const products = await cursor.toArray();
+
   res.send({ count, products });
 });
+
 
 
     //Get single Api
@@ -492,6 +494,7 @@ app.get("/", (req, res) => {
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 });
+
 
 
 
