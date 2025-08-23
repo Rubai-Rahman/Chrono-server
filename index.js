@@ -61,24 +61,39 @@ async function run() {
     const orderCollection = database.collection("orders");
     const usersCollection = database.collection("users");
     const newsCollection = database.collection("news");
-    //Get Products
-    app.get("/products", async (req, res) => {
-      const cursor = productCollection.find({});
-      const page = req.query.page;
-      const size = parseInt(req.query.size);
-      let products;
-      const count = await cursor.count();
-      if (page) {
-        products = await cursor
-          .skip(page * size)
-          .limit(size)
-          .toArray();
-      } else {
-        products = await cursor.toArray();
-      }
+   app.get("/products", async (req, res) => {
+  const { page, size, category, brand, priceMin, priceMax, sort } = req.query;
 
-      res.send({ count, products });
-    });
+  let query = {};
+
+  // Category filter
+  if (category) query.category = category;
+
+  // Brand filter
+  if (brand) query.brand = brand;
+
+  // Price range filter
+  if (priceMin || priceMax) {
+    query.price = {};
+    if (priceMin) query.price.$gte = parseFloat(priceMin);
+    if (priceMax) query.price.$lte = parseFloat(priceMax);
+  }
+
+  let cursor = productCollection.find(query);
+
+  // Sorting
+  if (sort === "createdAt_desc") cursor = cursor.sort({ createdAt: -1 });
+  else if (sort === "price_asc") cursor = cursor.sort({ price: 1 });
+  else if (sort === "price_desc") cursor = cursor.sort({ price: -1 });
+
+  // Pagination
+  const count = await cursor.count();
+  if (page && size) cursor = cursor.skip(parseInt(page) * parseInt(size)).limit(parseInt(size));
+
+  const products = await cursor.toArray();
+  res.send({ count, products });
+});
+
 
     //Get single Api
     app.get("/products/:id", async (req, res) => {
@@ -477,6 +492,7 @@ app.get("/", (req, res) => {
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 });
+
 
 
 
