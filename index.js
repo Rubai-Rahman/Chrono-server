@@ -75,27 +75,34 @@ app.get("/products", async (req, res) => {
 
   let cursor = productCollection.find(query);
 
-  // Sorting
+  // Sorting - fix field names to match your data
   if (sort === "createdAt_desc") cursor = cursor.sort({ createdAt: -1 });
   else if (sort === "createdAt_asc") cursor = cursor.sort({ createdAt: 1 });
   else if (sort === "price_asc") cursor = cursor.sort({ price: 1 });
   else if (sort === "price_desc") cursor = cursor.sort({ price: -1 });
+  // Add default sorting
+  else cursor = cursor.sort({ createdAt: -1 });
 
   // Apply limit for home page featured
   if (limit) cursor = cursor.limit(parseInt(limit));
 
-  // Pagination
+  // Pagination - fix for 1-based page numbers
   if (page && size) {
-    cursor = cursor.skip(parseInt(page) * parseInt(size)).limit(parseInt(size));
+    const pageNum = parseInt(page);
+    const sizeNum = parseInt(size);
+    cursor = cursor.skip((pageNum - 1) * sizeNum).limit(sizeNum);
   }
 
-  const count = await cursor.count();
-  const products = await cursor.toArray();
+  try {
+    const count = await productCollection.countDocuments(query); // Use countDocuments instead of cursor.count()
+    const products = await cursor.toArray();
 
-  res.send({ count, products });
+    res.send({ count, products });
+  } catch (error) {
+    console.error('Error fetching products:', error);
+    res.status(500).send({ error: 'Failed to fetch products' });
+  }
 });
-
-
 
     //Get single Api
     app.get("/products/:id", async (req, res) => {
@@ -494,6 +501,7 @@ app.get("/", (req, res) => {
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 });
+
 
 
 
