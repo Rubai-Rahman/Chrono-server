@@ -7,7 +7,7 @@ const app = express();
 const port = process.env.PORT || 5000;
 const fileUpload = require("express-fileupload");
 const admin = require("firebase-admin");
-
+const { body, validationResult } = require('express-validator');
 app.use(cors());
 app.use(express());
 app.use(fileUpload());
@@ -400,7 +400,25 @@ app.post("/comments/:id/react", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
+    //subscriber
+app.post(
+  '/newsletter/subscribe',
+  body('email').isEmail().withMessage('A valid email is required'),
+  async (req, res) => {
+    // 1. Check validation results
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, message: errors.array()[0].msg });
+    }
+    const { email } = req.body;
+    try {
+      res.json({ success: true, message: 'Subscribed successfully' });
+    } catch (err) {
+      console.error('Subscription error:', err);
+      res.status(500).json({ success: false, message: 'Server error' });
+    }
+  }
+);
     //post user
     app.post("/users", async (req, res) => {
       const user = req.body;
@@ -501,6 +519,7 @@ app.get("/", (req, res) => {
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 });
+
 
 
 
