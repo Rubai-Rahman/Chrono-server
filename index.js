@@ -422,7 +422,7 @@ async function run() {
     });
     //subscriber
     app.post(
-      '/newsletter/subscribe',
+      '/newsletter',
       body('email').isEmail().withMessage('A valid email is required'),
       async (req, res) => {
         // 1. Validate the request
@@ -434,22 +434,19 @@ async function run() {
         }
 
         const { email } = req.body;
-        const subscribeCollection = database.collection('newsletter');
 
         try {
           // 2. Check if the email is already subscribed
-          const existing = await subscribeCollection
-            .where('email', '==', email)
-            .get();
+          const existing = await subscribeCollection.findOne({ email });
 
-          if (!existing.empty) {
+          if (existing) {
             return res
               .status(400)
               .json({ success: false, message: 'Email is already subscribed' });
           }
 
           // 3. Add subscriber
-          await subscribeCollection.add({
+          const result = await subscribeCollection.insertOne({
             email,
             subscribedAt: new Date(),
           });
