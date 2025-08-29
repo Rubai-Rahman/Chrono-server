@@ -127,56 +127,58 @@ async function run() {
     });
     //get Orders
     app.post('/orders', verifyToken, async (req, res) => {
-  try {
-    const decodedEmail = req.decodedEmail;
-    if (!decodedEmail) {
-      return res.status(401).json({ error: 'Unauthorized: Token missing or invalid' });
-    }
+      try {
+        const decodedEmail = req.decodedEmail;
+        if (!decodedEmail) {
+          return res
+            .status(401)
+            .json({ error: 'Unauthorized: Token missing or invalid' });
+        }
 
-    // Find the user in DB to get _id
-    const user = await usersCollection.findOne({ email: decodedEmail });
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
+        // Find the user in DB to get _id
+        const user = await usersCollection.findOne({ email: decodedEmail });
+        if (!user) {
+          return res.status(404).json({ error: 'User not found' });
+        }
 
-    const {
-      firstName,
-      lastName,
-      phone,
-      address,
-      city,
-      postalCode,
-      country,
-      paymentMethod,
-      shippingMethod,
-     
-    } = req.body;
+        const {
+          firstName,
+          lastName,
+          phone,
+          address,
+          city,
+          postalCode,
+          country,
+          paymentMethod,
+          shippingMethod,
+        } = req.body;
 
-    const order = {
-      userId: user._id, // store MongoDB _id as reference
-      firstName,
-      lastName,
-      phone,
-      address,
-      city,
-      postalCode,
-      country: country || 'Bangladesh',
-      paymentMethod,
-      shippingMethod: shippingMethod || 'standard',
-     ,
-      paymentStatus: 'pending',
-      shippingStatus: 'pending',
-      orderStatus: 'placed',
-      createdAt: new Date(),
-    };
+        const order = {
+          userId: user._id, // store MongoDB _id as reference
+          firstName,
+          lastName,
+          phone,
+          address,
+          city,
+          postalCode,
+          country: country || 'Bangladesh',
+          paymentMethod,
+          shippingMethod: shippingMethod || 'standard',
+          paymentStatus: 'pending',
+          shippingStatus: 'pending',
+          orderStatus: 'placed',
+          createdAt: new Date(),
+        };
 
-    const result = await orderCollection.insertOne(order);
-    res.json({ success: true, orderId: result.insertedId });
-  } catch (err) {
-    console.error('Error placing order:', err);
-    res.status(500).json({ success: false, error: 'Internal Server Error' });
-  }
-});
+        const result = await orderCollection.insertOne(order);
+        res.json({ success: true, orderId: result.insertedId });
+      } catch (err) {
+        console.error('Error placing order:', err);
+        res
+          .status(500)
+          .json({ success: false, error: 'Internal Server Error' });
+      }
+    });
 
     //single user orders
     app.get('/orders/:email', async (req, res) => {
@@ -605,4 +607,3 @@ app.get('/', (req, res) => {
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 });
-
