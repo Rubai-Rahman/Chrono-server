@@ -41,14 +41,46 @@ admin.initializeApp({
 });
 
 async function verifyToken(req, res, next) {
-  if (req.headers?.authorization?.startsWith('Bearer')) {
-    const token = req.headers.authorization.split(' ')[1];
-    try {
-      const decodedUser = await admin.auth().verifyIdToken(token);
-      req.decodedEmail = decodedUser.email;
-    } catch {}
+  // Check if authorization header exists and is in the correct format
+  const authHeader = req.headers?.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({
+      data: null,
+      error: {
+        message: 'Unauthorized',
+        status: 401,
+        details: { error: 'Authorization token is missing or malformed' }
+      },
+      success: false
+    });
   }
-  next();
+
+  const token = authHeader.split(' ')[1];
+  
+  try {
+    // Verify the token
+    const decodedUser = await admin.auth().verifyIdToken(token);
+    
+    // Attach the decoded user to the request object
+    req.decodedEmail = decodedUser.email;
+    
+    // Continue to the next middleware/route handler
+    return next();
+  } catch (error) {
+    console.error('Token verification failed:', error);
+    return res.status(401).json({
+      data: null,
+      error: {
+        message: 'Unauthorized',
+        status: 401,
+        details: { 
+          error: 'Invalid or expired token',
+          details: error.message 
+        }
+      },
+      success: false
+    });
+  }
 }
 
 async function run() {
@@ -116,20 +148,23 @@ async function run() {
 
     //POST API Post Cart Item
    
-    //get Orders
+    // Create Order
     app.post('/orders', verifyToken, async (req, res) => {
       try {
         const decodedEmail = req.decodedEmail;
-        if (!decodedEmail) {
-          return res
-            .status(401)
-            .json({ error: 'Unauthorized: Token missing or invalid' });
-        }
-
+        
         // Find the user in DB to get _id
         const user = await usersCollection.findOne({ email: decodedEmail });
         if (!user) {
-          return res.status(404).json({ error: 'User not found' });
+          return res.status(404).json({
+            data: null,
+            error: {
+              message: 'User not found',
+              status: 404,
+              details: { error: 'No user found with the provided email' }
+            },
+            success: false
+          });
         }
 
         const {
