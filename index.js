@@ -115,16 +115,7 @@ async function run() {
     });
 
     //POST API Post Cart Item
-    app.post('/orders', async (req, res) => {
-      const email = req.body.email;
-      const cart = req.body.cart;
-      const order = {
-        email,
-        cart,
-      };
-      const result = await orderCollection.insertOne(order);
-      res.json(result);
-    });
+   
     //get Orders
     app.post('/orders', verifyToken, async (req, res) => {
       try {
@@ -607,3 +598,4 @@ app.get('/', (req, res) => {
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 });
+
